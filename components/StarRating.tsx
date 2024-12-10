@@ -6,16 +6,16 @@ import { supabase } from '@/lib/supabase';
 
 interface StarRatingProps {
   wallpaperId: string;
-  initialRating?: number;
-  totalRatings?: number;
+  initialRating?: number | null;
+  totalRatings?: number | null;
 }
 
 export default function StarRating({ wallpaperId, initialRating = 0, totalRatings = 0 }: StarRatingProps) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [hasRated, setHasRated] = useState(false);
-  const [averageRating, setAverageRating] = useState(initialRating);
-  const [ratingCount, setRatingCount] = useState(totalRatings);
+  const [averageRating, setAverageRating] = useState(initialRating ?? 0);
+  const [ratingCount, setRatingCount] = useState(totalRatings ?? 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load user's previous rating from localStorage on mount
