@@ -1,101 +1,166 @@
-import Image from "next/image";
+import { supabase } from '@/lib/supabase';
+import type { Wallpaper } from '@/lib/supabase';
+import Link from 'next/link';
+import Image from 'next/image';
 
-export default function Home() {
+async function getFeaturedWallpapers() {
+  const { data } = await supabase
+    .from('wallpapers')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(6);
+  return data as Wallpaper[];
+}
+
+async function getCategoryPreviews() {
+  const { data: mobile } = await supabase
+    .from('wallpapers')
+    .select('preview_url')
+    .eq('category', 'mobile')
+    .order('created_at', { ascending: false })
+    .limit(4);
+
+  const { data: desktop } = await supabase
+    .from('wallpapers')
+    .select('preview_url')
+    .eq('category', 'desktop')
+    .order('created_at', { ascending: false })
+    .limit(4);
+
+  return {
+    mobile: mobile || [],
+    desktop: desktop || []
+  };
+}
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
+export default async function Home() {
+  const featuredWallpapers = await getFeaturedWallpapers();
+  const categoryPreviews = await getCategoryPreviews();
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="space-y-16">
+      {/* Hero Section */}
+      <section className="text-center space-y-6 py-12">
+        <h1 className="text-4xl md:text-5xl font-bold text-[#F8F8F8] max-w-3xl mx-auto">
+          Premium Wallpapers for Your Devices
+        </h1>
+        <p className="text-xl text-[#F8F8F8]/60 max-w-2xl mx-auto">
+          High-quality wallpapers for your desktop, laptop, and mobile devices
+        </p>
+        <div className="flex justify-center gap-4">
+          <Link
+            href="/wallpapers"
+            className="px-6 py-3 bg-[#4169E1] text-[#F8F8F8] rounded-lg hover:bg-[#4169E1]/90 transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Browse Collection
+          </Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* Featured Wallpapers */}
+      <section className="space-y-8">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-[#F8F8F8]">Featured Wallpapers</h2>
+          <Link
+            href="/wallpapers"
+            className="text-[#4169E1] hover:text-[#4169E1]/80 transition-colors"
+          >
+            View All
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredWallpapers?.map((wallpaper) => (
+            <Link
+              href={`/wallpapers/${wallpaper.id}`}
+              key={wallpaper.id}
+              className="group bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-[#4169E1]/50 transition-all duration-300"
+            >
+              <div className="relative aspect-[9/16] sm:aspect-[3/4] overflow-hidden">
+                <Image
+                  src={wallpaper.preview_url}
+                  alt={wallpaper.title}
+                  fill
+                  className="object-cover transform group-hover:scale-105 transition-transform duration-500"
+                />
+                {wallpaper.price === 0 && (
+                  <span className="absolute top-2 right-2 bg-[#4169E1] text-[#F8F8F8] text-xs font-medium px-2 py-1 rounded-full">
+                    Free
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                <h3 className="font-medium text-[#F8F8F8] group-hover:text-[#4169E1] transition-colors line-clamp-1">
+                  {wallpaper.title}
+                </h3>
+                <p className="text-[#F8F8F8]/60 mt-1">
+                  {formatPrice(wallpaper.price)}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Categories Section */}
+      <section className="space-y-8">
+        <h2 className="text-2xl font-bold text-[#F8F8F8]">Browse by Category</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[
+            {
+              name: 'Mobile',
+              description: 'High-resolution wallpapers optimized for smartphones',
+              previews: categoryPreviews.mobile
+            },
+            {
+              name: 'Desktop',
+              description: 'Premium wallpapers for your computer and laptop screens',
+              previews: categoryPreviews.desktop
+            }
+          ].map((category) => (
+            <Link
+              key={category.name}
+              href={`/wallpapers?category=${category.name.toLowerCase()}`}
+              className="group relative rounded-2xl bg-white/5 border border-white/10 hover:border-[#4169E1]/50 transition-all p-6"
+            >
+              {/* Preview Grid */}
+              <div className="grid grid-cols-2 gap-2 mb-4 aspect-video">
+                {category.previews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className="relative rounded-lg overflow-hidden"
+                  >
+                    <Image
+                      src={preview.preview_url}
+                      alt={`${category.name} preview ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Category Info */}
+              <div>
+                <h3 className="text-2xl font-bold text-[#F8F8F8] group-hover:text-[#4169E1] transition-colors">
+                  {category.name}
+                </h3>
+                <p className="mt-2 text-[#F8F8F8]/80 text-sm md:text-base">
+                  {category.description}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
