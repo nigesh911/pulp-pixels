@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 
-// Initialize Razorpay
+// Initialize Razorpay with live keys
 const razorpay = new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,

@@ -8,13 +8,14 @@ export async function POST(request: Request) {
     const { orderId, paymentId, signature, wallpaperId } = await request.json();
     const supabase = createRouteHandlerClient({ cookies });
 
-    // Verify signature
+    // Verify signature with live key
     const body = orderId + "|" + paymentId;
     const expectedSignature = createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
       .update(body.toString())
       .digest('hex');
 
     if (expectedSignature !== signature) {
+      console.error('Signature verification failed');
       throw new Error('Invalid payment signature');
     }
 
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       ]);
 
     if (dbError) {
+      console.error('Database error:', dbError);
       throw new Error('Failed to record payment');
     }
 
