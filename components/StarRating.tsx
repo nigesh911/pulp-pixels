@@ -1,108 +1,96 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/lib/database.d';
+import { supabase } from '@/lib/supabase';
 
 interface StarRatingProps {
   wallpaperId: string;
-  initialRating?: number | null;
-  totalRatings?: number | null;
+  initialRating?: number;
+  totalRatings?: number;
 }
 
 export default function StarRating({ wallpaperId, initialRating = 0, totalRatings = 0 }: StarRatingProps) {
-  const [rating, setRating] = useState(initialRating || 0);
+  const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [hasRated, setHasRated] = useState(false);
-  const [ratingCount, setRatingCount] = useState(totalRatings || 0);
-  const [error, setError] = useState<string | null>(null);
+  const [averageRating, setAverageRating] = useState(initialRating);
+  const [ratingCount, setRatingCount] = useState(totalRatings);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createClientComponentClient<Database>();
 
-  // Check if user has already rated this wallpaper
+  // Load user's previous rating from localStorage on mount
   useEffect(() => {
-    const checkExistingRating = async () => {
-      try {
-        const { data: existingRating } = await supabase
-          .from('ratings')
-          .select('rating')
-          .eq('wallpaper_id', wallpaperId)
-          .maybeSingle();
-
-        if (existingRating) {
-          setHasRated(true);
-          setRating(existingRating.rating);
-        }
-      } catch (error) {
-        console.error('Error checking existing rating:', error);
-      }
-    };
-
-    checkExistingRating();
+    const storedRating = localStorage.getItem(`rating_${wallpaperId}`);
+    if (storedRating) {
+      setRating(parseInt(storedRating));
+      setHasRated(true);
+    }
   }, [wallpaperId]);
 
-  // Update local state when props change
-  useEffect(() => {
-    setRating(initialRating || 0);
-    setRatingCount(totalRatings || 0);
-  }, [initialRating, totalRatings]);
+  // Function to get a simple browser fingerprint
+  const getBrowserFingerprint = () => {
+    const { userAgent, language, platform } = navigator;
+    return btoa(`${userAgent}${language}${platform}`);
+  };
 
-  async function handleRating(value: number) {
-    if (hasRated || isSubmitting) return;
+  const handleRating = async (value: number) => {
+    if (isSubmitting || (hasRated && rating === value)) return;
+
+    setIsSubmitting(true);
+    const fingerprint = getBrowserFingerprint();
 
     try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // Insert the new rating
-      const { error: insertError } = await supabase
-        .from('ratings')
-        .insert([{ wallpaper_id: wallpaperId, rating: value }]);
-
-      if (insertError) {
-        console.error('Insert Error:', insertError);
-        throw new Error('Unable to submit rating. Please try again.');
-      }
-
-      // Get updated rating stats
-      const { data: ratingData, error: fetchError } = await supabase
+      const { data: existingRating } = await supabase
         .from('ratings')
         .select('rating')
-        .eq('wallpaper_id', wallpaperId);
+        .eq('wallpaper_id', wallpaperId)
+        .eq('browser_fingerprint', fingerprint)
+        .single();
 
-      if (fetchError) {
-        console.error('Fetch Error:', fetchError);
-        throw new Error('Unable to calculate rating. Please try again.');
+      if (existingRating) {
+        // Update existing rating
+        await supabase
+          .from('ratings')
+          .update({ rating: value })
+          .eq('wallpaper_id', wallpaperId)
+          .eq('browser_fingerprint', fingerprint);
+      } else {
+        // Insert new rating
+        await supabase
+          .from('ratings')
+          .insert([
+            {
+              wallpaper_id: wallpaperId,
+              rating: value,
+              browser_fingerprint: fingerprint,
+              user_ip: null // IP will be handled by RLS policies
+            }
+          ]);
+        setRatingCount(prev => prev + 1);
       }
 
-      if (ratingData && ratingData.length > 0) {
-        const newAverage = ratingData.reduce((acc: number, curr: { rating: number }) => acc + curr.rating, 0) / ratingData.length;
-        
-        const { error: updateError } = await supabase
-          .from('wallpapers')
-          .update({ 
-            average_rating: Number(newAverage.toFixed(2)),
-            total_ratings: ratingData.length
-          })
-          .eq('id', wallpaperId);
-
-        if (updateError) {
-          console.error('Update Error:', updateError);
-          throw new Error('Unable to update rating. Please try again.');
-        }
-
-        setRating(value); // Set to user's rating
-        setRatingCount(ratingData.length);
-      }
-
+      // Update local state and storage
+      setRating(value);
       setHasRated(true);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error submitting rating. Please try again.';
-      setError(errorMessage);
-      console.error('Rating Error:', err);
+      localStorage.setItem(`rating_${wallpaperId}`, value.toString());
+
+      // Fetch updated average
+      const { data: updatedWallpaper } = await supabase
+        .from('wallpapers')
+        .select('average_rating')
+        .eq('id', wallpaperId)
+        .single();
+
+      if (updatedWallpaper) {
+        setAverageRating(updatedWallpaper.average_rating || 0);
+      }
+
+    } catch (error) {
+      console.error('Error submitting rating:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -110,35 +98,32 @@ export default function StarRating({ wallpaperId, initialRating = 0, totalRating
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
-            onClick={() => handleRating(star)}
-            onMouseEnter={() => !hasRated && !isSubmitting && setHover(star)}
-            onMouseLeave={() => !hasRated && !isSubmitting && setHover(0)}
+            onClick={() => !hasRated && handleRating(star)}
+            onMouseEnter={() => !hasRated && setHover(star)}
+            onMouseLeave={() => !hasRated && setHover(0)}
             disabled={hasRated || isSubmitting}
-            className={`p-1 transition-colors ${
-              hasRated || isSubmitting ? 'cursor-default' : 'cursor-pointer'
-            }`}
+            className={`transition-transform ${!hasRated && 'hover:scale-110'} ${hasRated && 'cursor-default'}`}
           >
             <Star
               className={`w-6 h-6 ${
                 star <= (hover || rating)
                   ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-[#F8F8F8]/20'
-              } ${isSubmitting ? 'opacity-50' : ''} transition-colors`}
+                  : 'text-gray-300'
+              }`}
             />
           </button>
         ))}
       </div>
+      
       <div className="text-sm text-center">
-        {error ? (
-          <p className="text-red-500">{error}</p>
+        {hasRated ? (
+          <p className="text-[#F8F8F8]/60">Thanks for rating!</p>
         ) : (
-          <p className="text-[#F8F8F8]/60">
-            {isSubmitting 
-              ? 'Submitting...' 
-              : hasRated 
-                ? 'Thanks for rating!' 
-                : 'Rate this wallpaper'}
-            {ratingCount > 0 && ` • ${ratingCount} ${ratingCount === 1 ? 'rating' : 'ratings'}`}
+          <p className="text-[#F8F8F8]/60">Rate this wallpaper</p>
+        )}
+        {ratingCount > 0 && (
+          <p className="text-[#F8F8F8]/40 text-xs">
+            {averageRating.toFixed(1)} stars ({ratingCount} {ratingCount === 1 ? 'rating' : 'ratings'})
           </p>
         )}
       </div>
