@@ -10,25 +10,47 @@ const razorpay = new Razorpay({
 export async function POST(request: Request) {
   try {
     const { amount, wallpaperId } = await request.json();
+    
+    console.log('Creating Razorpay order:', { amount, wallpaperId });
+    
+    if (!amount || amount <= 0) {
+      throw new Error('Invalid amount');
+    }
 
-    // Create Razorpay order
-    const order = await razorpay.orders.create({
+    // Create order options
+    const orderOptions = {
       amount: amount,
       currency: 'INR',
       notes: {
         wallpaperId: wallpaperId
-      }
-    });
+      },
+      receipt: `receipt_${Date.now()}`
+    };
+    
+    console.log('Order options:', orderOptions);
+
+    // Create Razorpay order
+    const order = await razorpay.orders.create(orderOptions);
+    console.log('Order created:', order);
 
     return NextResponse.json({ 
       orderId: order.id,
       amount: order.amount,
       currency: order.currency
     });
-  } catch (error) {
-    console.error('Order creation error:', error);
+  } catch (error: any) {
+    console.error('Order creation error:', {
+      message: error.message,
+      stack: error.stack,
+      details: error.details
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { 
+        error: 'Failed to create order',
+        details: error.message,
+        code: error.code
+      },
       { status: 500 }
     );
   }

@@ -54,7 +54,7 @@ export default async function CategoriesPage() {
                 <Link href={`/wallpapers/${wallpaper.id}`} key={wallpaper.id} className="group">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-lg">
                     <Image
-                      src={wallpaper.image_url}
+                      src={wallpaper.image_path}
                       alt={wallpaper.title}
                       fill
                       className="object-cover transition-transform group-hover:scale-105"

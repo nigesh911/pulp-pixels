@@ -6,6 +6,11 @@ import { Download, Shield, Smartphone, Monitor, X, Mail } from 'lucide-react';
 import Image from 'next/image';
 import type { Wallpaper } from '@/lib/supabase';
 import UPIPaymentButton from '@/components/UPIPaymentButton';
+import WallpaperImage from '@/components/WallpaperImage';
+import StarRating from '@/components/StarRating';
+import type { Database } from '@/lib/database.d';
+
+type Rating = Database['public']['Tables']['ratings']['Row'];
 
 export default function WallpaperPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -16,23 +21,70 @@ export default function WallpaperPage({ params }: { params: Promise<{ id: string
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
   const [paymentComplete, setPaymentComplete] = useState(false);
-  const supabase = createClientComponentClient();
+  const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
     fetchWallpaper();
   }, [id]);
 
   async function fetchWallpaper() {
-    const { data } = await supabase
-      .from('wallpapers')
-      .select('*')
-      .eq('id', id)
-      .single();
+    try {
+      // First get the wallpaper data
+      const { data, error } = await supabase
+        .from('wallpapers')
+        .select(`
+          *,
+          ratings:ratings(rating)
+        `)
+        .eq('id', id)
+        .single();
 
-    if (data) {
-      setWallpaper(data);
+      if (error) throw error;
+
+      if (!data) {
+        setWallpaper(null);
+        setLoading(false);
+        return;
+      }
+
+      // Check if the image exists in storage
+      const { data: { publicUrl } } = supabase.storage
+        .from('wallpapers')
+        .getPublicUrl(data.image_path);
+
+      const imageExists = await fetch(publicUrl, { method: 'HEAD' })
+        .then(res => res.ok)
+        .catch(() => false);
+
+      if (!imageExists) {
+        // If image doesn't exist, delete the wallpaper record
+        await supabase
+          .from('wallpapers')
+          .delete()
+          .eq('id', id);
+        
+        setWallpaper(null);
+        setLoading(false);
+        return;
+      }
+
+      // Calculate average rating and total ratings
+      const ratings = (data.ratings || []) as Pick<Rating, 'rating'>[];
+      const totalRatings = ratings.length;
+      const averageRating = totalRatings > 0
+        ? ratings.reduce((acc: number, curr: Pick<Rating, 'rating'>) => acc + curr.rating, 0) / totalRatings
+        : 0;
+
+      setWallpaper({
+        ...data,
+        average_rating: averageRating,
+        total_ratings: totalRatings
+      });
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching wallpaper:', error);
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleDownload() {
@@ -118,28 +170,13 @@ export default function WallpaperPage({ params }: { params: Promise<{ id: string
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Image Section with Watermark */}
-          <div className="relative aspect-[9/16] lg:aspect-[3/4] rounded-xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10" />
-            <Image
-              src={wallpaper.preview_url}
+          <div className="relative w-full">
+            <WallpaperImage
+              src={wallpaper.image_path}
               alt={wallpaper.title}
-              fill
-              className="object-cover select-none"
-              onContextMenu={(e) => e.preventDefault()}
-              draggable={false}
+              aspectRatio={wallpaper.category as 'mobile' | 'desktop'}
+              className="w-full"
             />
-            {/* Repeating Watermark Pattern */}
-            <div className="absolute inset-0 z-20 select-none pointer-events-none">
-              <div className="w-full h-full relative transform rotate-[-30deg] scale-150">
-                <div className="absolute inset-0 grid grid-cols-3 gap-4 opacity-[0.03]">
-                  {Array.from({ length: 24 }).map((_, i) => (
-                    <div key={i} className="text-white text-xl font-bold whitespace-nowrap">
-                      Wallpapers Preview
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Details Section */}
@@ -151,6 +188,15 @@ export default function WallpaperPage({ params }: { params: Promise<{ id: string
               {wallpaper.description && (
                 <p className="text-[#F8F8F8]/80 mt-4">{wallpaper.description}</p>
               )}
+            </div>
+
+            {/* Rating */}
+            <div className="bg-white/5 rounded-xl p-6 backdrop-blur-sm">
+              <StarRating 
+                wallpaperId={wallpaper.id} 
+                initialRating={wallpaper.average_rating} 
+                totalRatings={wallpaper.total_ratings}
+              />
             </div>
 
             {/* Price & Download */}
@@ -169,10 +215,12 @@ export default function WallpaperPage({ params }: { params: Promise<{ id: string
                 {wallpaper.price === 0 ? (
                   <button
                     onClick={handleDownload}
-                    className="px-6 py-3 bg-[#4169E1] text-[#F8F8F8] rounded-lg hover:bg-[#4169E1]/90 transition-colors flex items-center gap-2"
+                    className="px-4 sm:px-6 py-3 bg-[#4169E1] text-[#F8F8F8] rounded-lg hover:bg-[#4169E1]/90 transition-colors flex items-center gap-2 text-sm sm:text-base whitespace-nowrap"
                   >
                     <Download className="w-5 h-5" />
-                    Download {wallpaper.category === 'mobile' ? 'Mobile' : 'Desktop'} Wallpaper
+                    <span className="hidden sm:inline">Download </span>
+                    {wallpaper.category === 'mobile' ? 'Mobile' : 'Desktop'}
+                    <span className="hidden sm:inline"> Wallpaper</span>
                   </button>
                 ) : (
                   <UPIPaymentButton 

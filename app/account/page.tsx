@@ -112,7 +112,7 @@ export default function AccountPage() {
 
       {wallpapers.length === 0 ? (
         <div className="text-center py-12 text-[#F8F8F8]/60">
-          <p>You haven't uploaded any wallpapers yet.</p>
+          <p>You haven&apos;t uploaded any wallpapers yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

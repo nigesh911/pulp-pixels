@@ -10,6 +10,7 @@ interface UploadFile {
   preview: string;
   uploading: boolean;
   error?: string;
+  title: string;
 }
 
 export default function UploadPage() {
@@ -32,7 +33,8 @@ export default function UploadPage() {
     const newFiles = validFiles.map(file => ({
       file,
       preview: URL.createObjectURL(file),
-      uploading: false
+      uploading: false,
+      title: file.name.split('.')[0].replace(/[-_]/g, ' ')
     }));
 
     setFiles(prev => [...prev, ...newFiles]);
@@ -43,6 +45,14 @@ export default function UploadPage() {
       const newFiles = [...prev];
       URL.revokeObjectURL(newFiles[index].preview);
       newFiles.splice(index, 1);
+      return newFiles;
+    });
+  };
+
+  const updateFileTitle = (index: number, newTitle: string) => {
+    setFiles(prev => {
+      const newFiles = [...prev];
+      newFiles[index] = { ...newFiles[index], title: newTitle };
       return newFiles;
     });
   };
@@ -67,6 +77,12 @@ export default function UploadPage() {
 
       if (!category || files.length === 0) {
         throw new Error('Please fill in all required fields and select files');
+      }
+
+      // Validate titles
+      const emptyTitles = files.some(file => !file.title.trim());
+      if (emptyTitles) {
+        throw new Error('Please provide titles for all wallpapers');
       }
 
       // Upload all files
@@ -99,7 +115,7 @@ export default function UploadPage() {
           const { error: dbError } = await supabase
             .from('wallpapers')
             .insert({
-              title: file.file.name.split('.')[0].replace(/[-_]/g, ' '),
+              title: file.title.trim(),
               description: null,
               price: parseFloat(price) || 0,
               category: category.toLowerCase(),
@@ -169,32 +185,46 @@ export default function UploadPage() {
 
         {/* Preview Grid */}
         {files.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {files.map((file, index) => (
-              <div key={index} className="relative aspect-[9/16] sm:aspect-[3/4]">
-                <img
-                  src={file.preview}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
-                  disabled={file.uploading}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                {file.uploading && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                    <Loader className="w-6 h-6 animate-spin text-white" />
-                  </div>
-                )}
-                {file.error && (
-                  <div className="absolute bottom-2 left-2 right-2 bg-red-500/90 text-white text-xs p-1 rounded">
-                    {file.error}
-                  </div>
-                )}
+              <div key={index} className="space-y-3">
+                <div className="relative aspect-[9/16] sm:aspect-[3/4]">
+                  <img
+                    src={file.preview}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                    disabled={file.uploading}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  {file.uploading && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                      <Loader className="w-6 h-6 animate-spin text-white" />
+                    </div>
+                  )}
+                  {file.error && (
+                    <div className="absolute bottom-2 left-2 right-2 bg-red-500/90 text-white text-xs p-1 rounded">
+                      {file.error}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#F8F8F8] mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={file.title}
+                    onChange={(e) => updateFileTitle(index, e.target.value)}
+                    placeholder="Enter wallpaper title"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4169E1]/50 text-[#F8F8F8]"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -209,11 +239,12 @@ export default function UploadPage() {
             name="category"
             required
             defaultValue=""
-            className="w-full px-4 py-2 bg-white/10 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4169E1]/50 text-[#F8F8F8]"
+            className="w-full px-4 py-2 bg-[#1A1A1A] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4169E1]/50 text-[#F8F8F8]"
+            style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
           >
-            <option value="" disabled>Select category</option>
-            <option value="mobile">Mobile</option>
-            <option value="desktop">Desktop</option>
+            <option value="" disabled className="bg-[#1A1A1A] text-[#F8F8F8]">Select category</option>
+            <option value="mobile" className="bg-[#1A1A1A] text-[#F8F8F8]">Mobile</option>
+            <option value="desktop" className="bg-[#1A1A1A] text-[#F8F8F8]">Desktop</option>
           </select>
         </div>
 
@@ -229,7 +260,7 @@ export default function UploadPage() {
             step="1"
             required
             defaultValue="0"
-            className="w-full px-4 py-2 bg-white/10 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4169E1]/50 text-[#F8F8F8]"
+            className="w-full px-4 py-2 bg-[#1A1A1A] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4169E1]/50 text-[#F8F8F8]"
           />
         </div>
 
