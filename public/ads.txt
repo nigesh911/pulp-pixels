@@ -1,0 +1,8 @@
+# Google AdSense
+google.com, pub-8588729139517913, DIRECT, f08c47fec0942fa0
+
+# Media.net
+media.net, 8CUGTY9G9, DIRECT
+google.com, pub-7439041255533808, RESELLER, f08c47fec0942fa0
+
+# Other ad networks can be added here 
