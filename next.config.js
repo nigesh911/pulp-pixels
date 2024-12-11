@@ -5,9 +5,13 @@ const nextConfig = {
     ignoreBuildErrors: true
   },
 
+  // Optimize build performance
+  swcMinify: true,
+  
   // Reduce build trace complexity
   experimental: {
-    optimizeCss: true
+    optimizeCss: true,
+    legacyBrowsers: false
   },
 
   // Optimize image handling
@@ -20,6 +24,9 @@ const nextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
+    domains: ['res.cloudinary.com'],
+    minimumCacheTTL: 60,
+    formats: ['image/webp']
   },
 
   // Webpack optimization
