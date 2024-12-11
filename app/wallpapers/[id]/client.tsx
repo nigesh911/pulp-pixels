@@ -61,6 +61,13 @@ export default function WallpaperClient({ wallpaper }: WallpaperClientProps) {
           throw new Error(data.details || data.error || 'Failed to create order');
         }
 
+        console.log('Received key from server:', data.key ? 'Key exists' : 'No key');
+        console.log('Order data:', { 
+          orderId: data.orderId,
+          amount: data.amount,
+          currency: data.currency
+        });
+
         const options = {
           key: data.key,
           amount: data.amount,

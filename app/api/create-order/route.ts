@@ -61,13 +61,21 @@ export async function POST(request: Request) {
     // Create Razorpay order
     const order = await razorpay.orders.create(orderOptions);
     console.log('Order created successfully:', order);
+    console.log('Sending response with key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ? 'Key exists' : 'No key');
 
-    return NextResponse.json({ 
+    const response = { 
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+    };
+
+    console.log('Full response:', {
+      ...response,
+      key: response.key ? 'Key exists' : 'No key'
     });
+
+    return NextResponse.json(response);
   } catch (error: any) {
     // Log the complete error
     console.error('Order creation failed:', {
