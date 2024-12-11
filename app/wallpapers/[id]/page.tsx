@@ -4,16 +4,12 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import WallpaperClient from './client';
 
-interface SearchParams {
-  [key: string]: string | string[] | undefined;
-}
-
-interface PageProps {
+type Props = {
   params: { id: string };
-  searchParams: SearchParams;
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies });
   const { data: wallpaper } = await supabase
     .from('wallpapers')
@@ -37,7 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function WallpaperPage({ params }: PageProps) {
+export default async function WallpaperPage({ params }: Props) {
   const supabase = createServerComponentClient({ cookies });
   const { data: wallpaper } = await supabase
     .from('wallpapers')

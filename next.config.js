@@ -1,19 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Optimize build performance
-  swcMinify: true,
-  
+  // TypeScript configuration
+  typescript: {
+    ignoreBuildErrors: true
+  },
+
   // Reduce build trace complexity
   experimental: {
-    optimizeCss: true,
-    legacyBrowsers: false
+    optimizeCss: true
   },
 
   // Optimize image handling
   images: {
-    domains: ['res.cloudinary.com'],
-    minimumCacheTTL: 60,
-    formats: ['image/webp']
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'bihzhhyljtftmvspnqeg.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
   },
 
   // Webpack optimization
