@@ -12,6 +12,15 @@ export async function POST(request: Request) {
     const { amount, wallpaperId } = await request.json();
     
     console.log('Received request:', { amount, wallpaperId });
+    console.log('Using Razorpay key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+    
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Missing Razorpay credentials');
+      return NextResponse.json(
+        { error: 'Payment service not configured' },
+        { status: 500 }
+      );
+    }
     
     if (!amount || amount <= 0) {
       console.error('Invalid amount:', amount);

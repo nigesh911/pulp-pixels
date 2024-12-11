@@ -117,8 +117,10 @@ export default function WallpaperClient({ wallpaper }: WallpaperClientProps) {
         };
 
         try {
+          console.log('Initializing Razorpay with key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
           const rzp = new window.Razorpay(options);
-          rzp.on('payment.failed', function (response: any) {
+          
+          rzp.on('payment.failed', function(response: any) {
             console.error('Payment failed:', response.error);
             toast.error(`Payment failed: ${response.error.description || 'Please try again'}`, { 
               id: 'payment',
@@ -126,9 +128,10 @@ export default function WallpaperClient({ wallpaper }: WallpaperClientProps) {
             });
             setIsSubmitting(false);
           });
+
           rzp.open();
-        } catch (razorpayError) {
-          console.error('Razorpay initialization error:', razorpayError);
+        } catch (error) {
+          console.error('Razorpay initialization error:', error);
           toast.error('Failed to initialize payment. Please try again.');
           setIsSubmitting(false);
         }
