@@ -1,16 +1,16 @@
 {
+  "version": 2,
   "buildCommand": "next build",
-  "devCommand": "next dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "outputDirectory": ".next",
+  "cleanUrls": true,
   "builds": [
     {
-      "src": "package.json",
+      "src": "next.config.js",
       "use": "@vercel/next"
     }
   ],
-  "env": {
-    "NEXT_LINT_ERROR_EXIT": "false"
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=4096"
+    }
   }
 } 
