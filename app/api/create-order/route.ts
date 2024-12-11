@@ -17,9 +17,12 @@ export async function POST(request: Request) {
       throw new Error('Invalid amount');
     }
 
+    // Convert amount to paise (Razorpay expects amount in smallest currency unit)
+    const amountInPaise = Math.round(amount * 100);
+
     // Create order options
     const orderOptions = {
-      amount: amount,
+      amount: amountInPaise,
       currency: 'INR',
       notes: {
         wallpaperId: wallpaperId
