@@ -24,8 +24,13 @@ export async function POST(request: Request) {
   try {
     const { amount, wallpaperId } = await request.json();
     
-    console.log('Received request:', { amount, wallpaperId });
-    console.log('Using Razorpay key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+    // Log configuration status
+    console.log('Razorpay Configuration:', {
+      keyIdExists: !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      keyIdPrefix: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.substring(0, 8),
+      secretExists: !!process.env.RAZORPAY_KEY_SECRET,
+      secretLength: process.env.RAZORPAY_KEY_SECRET?.length
+    });
     
     if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
       console.error('Missing Razorpay credentials');
@@ -58,44 +63,48 @@ export async function POST(request: Request) {
     
     console.log('Creating order with options:', orderOptions);
 
-    // Create Razorpay order
-    const order = await razorpay.orders.create(orderOptions);
-    console.log('Order created successfully:', order);
-    console.log('Sending response with key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ? 'Key exists' : 'No key');
+    try {
+      // Create Razorpay order
+      const order = await razorpay.orders.create(orderOptions);
+      console.log('Order created successfully:', order);
 
-    const response = { 
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-    };
+      const response = { 
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+      };
 
-    console.log('Full response:', {
-      ...response,
-      key: response.key ? 'Key exists' : 'No key'
-    });
-
-    return NextResponse.json(response);
+      return NextResponse.json(response);
+    } catch (razorpayError: any) {
+      console.error('Razorpay API Error Details:', {
+        error: razorpayError,
+        message: razorpayError.message,
+        description: razorpayError.error?.description,
+        code: razorpayError.error?.code,
+        field: razorpayError.error?.field,
+        step: razorpayError.error?.step,
+        httpStatus: razorpayError.statusCode
+      });
+      
+      return NextResponse.json(
+        { 
+          error: 'Razorpay API Error',
+          details: razorpayError.error?.description || razorpayError.message,
+          code: razorpayError.error?.code,
+          httpStatus: razorpayError.statusCode
+        },
+        { status: razorpayError.statusCode || 400 }
+      );
+    }
   } catch (error: any) {
-    // Log the complete error
     console.error('Order creation failed:', {
+      error,
       message: error.message,
       stack: error.stack,
       details: error.details,
       razorpayError: error.error
     });
-    
-    // Check if it's a Razorpay API error
-    if (error.error && error.error.description) {
-      return NextResponse.json(
-        { 
-          error: 'Razorpay API Error',
-          details: error.error.description,
-          code: error.error.code
-        },
-        { status: 400 }
-      );
-    }
     
     return NextResponse.json(
       { 

@@ -193,14 +193,15 @@ export default function WallpaperClient({ wallpaper }: WallpaperClientProps) {
       />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Image Preview */}
-          <div className="relative aspect-[3/4] rounded-xl overflow-hidden">
+          {/* Wallpaper Preview */}
+          <div className="relative">
             <WallpaperImage
               src={wallpaper.preview_url}
               alt={wallpaper.title}
-              aspectRatio="mobile"
+              aspectRatio={wallpaper.category as 'mobile' | 'desktop'}
               isPaid={wallpaper.price > 0}
-              className="w-full h-full"
+              fit={wallpaper.category === 'mobile' ? 'contain' : 'cover'}
+              className="w-full shadow-xl"
             />
           </div>
 
