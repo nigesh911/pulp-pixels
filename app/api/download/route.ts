@@ -3,26 +3,70 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-// Create a transporter using Gmail
+// Create a transporter using SMTP settings
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: false // Helps with self-signed certificates
+  }
 });
 
 export async function POST(request: Request) {
   try {
     const { wallpaperId, email } = await request.json();
+
+    if (!wallpaperId || !email) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    console.log('Processing download request for:', { wallpaperId, email });
+
+    // Verify email configuration
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.error('Missing email configuration');
+      return NextResponse.json(
+        { error: 'Email service not configured' },
+        { status: 500 }
+      );
+    }
+
+    // Verify SMTP connection
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (smtpError) {
+      console.error('SMTP verification failed:', smtpError);
+      return NextResponse.json(
+        { error: 'Email service unavailable', details: smtpError instanceof Error ? smtpError.message : 'Unknown error' },
+        { status: 500 }
+      );
+    }
+
     const supabase = createRouteHandlerClient({ cookies });
 
     // Get wallpaper details
-    const { data: wallpaper } = await supabase
+    const { data: wallpaper, error: wallpaperError } = await supabase
       .from('wallpapers')
       .select('*')
       .eq('id', wallpaperId)
       .single();
+
+    if (wallpaperError) {
+      console.error('Error fetching wallpaper:', wallpaperError);
+      return NextResponse.json(
+        { error: 'Failed to fetch wallpaper details' },
+        { status: 500 }
+      );
+    }
 
     if (!wallpaper) {
       return NextResponse.json(
@@ -31,10 +75,20 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('Wallpaper found:', wallpaper.title);
+
     // Generate a signed URL that expires in 1 hour
-    const { data: urlData } = await supabase.storage
+    const { data: urlData, error: urlError } = await supabase.storage
       .from('wallpapers')
       .createSignedUrl(wallpaper.image_path, 3600);
+
+    if (urlError) {
+      console.error('Error generating signed URL:', urlError);
+      return NextResponse.json(
+        { error: 'Failed to generate download link' },
+        { status: 500 }
+      );
+    }
 
     if (!urlData?.signedUrl) {
       return NextResponse.json(
@@ -42,6 +96,8 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    console.log('Generated signed URL successfully');
 
     // Store the download request
     const { error: dbError } = await supabase
@@ -63,9 +119,14 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('Download request recorded in database');
+
     // Send email
     const mailOptions = {
-      from: process.env.GMAIL_USER,
+      from: {
+        name: 'Pulp Pixels',
+        address: process.env.GMAIL_USER as string
+      },
       to: email,
       subject: `Download Link for ${wallpaper.title}`,
       html: `
@@ -90,13 +151,34 @@ export async function POST(request: Request) {
       `
     };
 
-    await transporter.sendMail(mailOptions);
-
-    return NextResponse.json({ success: true });
+    try {
+      console.log('Attempting to send email to:', email);
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Email sent successfully:', info);
+      return NextResponse.json({ 
+        success: true,
+        messageId: info.messageId 
+      });
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to send email', 
+          details: emailError instanceof Error ? emailError.message : 'Unknown error',
+          config: {
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            user: process.env.GMAIL_USER
+          }
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Error processing download:', error);
     return NextResponse.json(
-      { error: 'Failed to process download request' },
+      { error: 'Failed to process download request', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

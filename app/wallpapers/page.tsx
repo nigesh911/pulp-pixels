@@ -3,6 +3,7 @@ import type { Wallpaper } from '@/lib/supabase';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpDown, Filter } from 'lucide-react';
+import WallpaperImage from '@/components/WallpaperImage';
 
 async function getWallpapers() {
   const { data } = await supabase
@@ -49,21 +50,22 @@ export default async function WallpapersPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {wallpapers?.map((wallpaper) => (
+        {wallpapers?.map((wallpaper, index) => (
           <Link 
             href={`/wallpapers/${wallpaper.id}`} 
             key={wallpaper.id} 
             className="group relative bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-[#4169E1]/50 transition-all duration-300"
           >
             <div className="relative aspect-[3/4] overflow-hidden">
-              <Image
+              <WallpaperImage
                 src={wallpaper.preview_url}
                 alt={wallpaper.title}
-                fill
-                className="object-cover transform group-hover:scale-105 transition-transform duration-500"
+                aspectRatio="mobile"
+                isPaid={wallpaper.price > 0}
+                className="w-full h-full"
               />
               {wallpaper.price === 0 && (
-                <span className="absolute top-2 right-2 bg-[#4169E1] text-[#F8F8F8] text-xs font-medium px-2 py-1 rounded-full">
+                <span className="absolute top-2 right-2 bg-[#4169E1] text-[#F8F8F8] text-xs font-medium px-2 py-1 rounded-full z-30">
                   Free
                 </span>
               )}

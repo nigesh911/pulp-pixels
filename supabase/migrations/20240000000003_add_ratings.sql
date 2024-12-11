@@ -6,11 +6,7 @@ create table public.ratings (
   id uuid default gen_random_uuid() primary key,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   wallpaper_id uuid references public.wallpapers(id) on delete cascade not null,
-  rating smallint not null check (rating >= 1 and rating <= 5),
-  user_ip text,
-  browser_fingerprint text,
-  -- Create a unique constraint to prevent multiple ratings from same browser
-  unique(wallpaper_id, browser_fingerprint)
+  rating smallint not null check (rating >= 1 and rating <= 5)
 );
 
 -- Add rating columns to wallpapers table if they don't exist
@@ -20,7 +16,6 @@ add column if not exists total_ratings integer default 0;
 
 -- Create indexes
 create index ratings_wallpaper_id_idx on public.ratings(wallpaper_id);
-create index ratings_fingerprint_idx on public.ratings(browser_fingerprint);
 
 -- Set RLS policies
 alter table public.ratings enable row level security;
@@ -35,12 +30,6 @@ create policy "Anyone can view ratings"
 on public.ratings for select
 to anon, authenticated
 using (true);
-
-create policy "Anyone can update ratings"
-on public.ratings for update
-to anon, authenticated
-using (true)
-with check (true);
 
 -- Create the function to update wallpaper ratings
 create or replace function update_wallpaper_rating()
@@ -64,6 +53,7 @@ end;
 $$ language plpgsql;
 
 -- Create the trigger
+drop trigger if exists update_wallpaper_rating on ratings;
 create trigger update_wallpaper_rating
 after insert or update or delete on ratings
 for each row execute function update_wallpaper_rating();

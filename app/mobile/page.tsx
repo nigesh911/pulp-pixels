@@ -55,7 +55,9 @@ export default function MobilePage() {
     src: wallpaper.preview_url,
     alt: wallpaper.title,
     href: `/wallpapers/${wallpaper.id}`,
-    price: wallpaper.price
+    price: wallpaper.price,
+    rating: wallpaper.average_rating ?? undefined,
+    totalRatings: wallpaper.total_ratings ?? undefined
   }));
 
   return (

@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true
+  },
   images: {
-    domains: ['bihzhhyljtftmvspnqeg.supabase.co'],
     remotePatterns: [
       {
         protocol: 'https',

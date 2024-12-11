@@ -22,6 +22,8 @@ export interface Database {
           tags: string[] | null
           is_featured: boolean
           uploaded_by: string
+          average_rating: number | null
+          total_ratings: number | null
         }
         Insert: {
           id?: string
@@ -35,6 +37,8 @@ export interface Database {
           tags?: string[] | null
           is_featured?: boolean
           uploaded_by: string
+          average_rating?: number | null
+          total_ratings?: number | null
         }
         Update: {
           id?: string
@@ -48,6 +52,34 @@ export interface Database {
           tags?: string[] | null
           is_featured?: boolean
           uploaded_by?: string
+          average_rating?: number | null
+          total_ratings?: number | null
+        }
+      }
+      ratings: {
+        Row: {
+          id: string
+          created_at: string
+          wallpaper_id: string
+          rating: number
+          user_ip: string | null
+          browser_fingerprint: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          wallpaper_id: string
+          rating: number
+          user_ip?: string | null
+          browser_fingerprint?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          wallpaper_id?: string
+          rating?: number
+          user_ip?: string | null
+          browser_fingerprint?: string | null
         }
       }
       payments: {

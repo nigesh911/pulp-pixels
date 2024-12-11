@@ -11,13 +11,17 @@ export async function POST(request: Request) {
   try {
     const { amount, wallpaperId } = await request.json();
     
-    console.log('Creating Razorpay order:', { amount, wallpaperId });
+    console.log('Received request:', { amount, wallpaperId });
     
     if (!amount || amount <= 0) {
-      throw new Error('Invalid amount');
+      console.error('Invalid amount:', amount);
+      return NextResponse.json(
+        { error: 'Invalid amount', details: 'Amount must be greater than 0' },
+        { status: 400 }
+      );
     }
 
-    // Convert amount to paise (Razorpay expects amount in smallest currency unit)
+    // Convert amount to paise (1 rupee = 100 paise)
     const amountInPaise = Math.round(amount * 100);
 
     // Create order options
@@ -30,11 +34,11 @@ export async function POST(request: Request) {
       receipt: `receipt_${Date.now()}`
     };
     
-    console.log('Order options:', orderOptions);
+    console.log('Creating order with options:', orderOptions);
 
     // Create Razorpay order
     const order = await razorpay.orders.create(orderOptions);
-    console.log('Order created:', order);
+    console.log('Order created successfully:', order);
 
     return NextResponse.json({ 
       orderId: order.id,
@@ -42,16 +46,30 @@ export async function POST(request: Request) {
       currency: order.currency
     });
   } catch (error: any) {
-    console.error('Order creation error:', {
+    // Log the complete error
+    console.error('Order creation failed:', {
       message: error.message,
       stack: error.stack,
-      details: error.details
+      details: error.details,
+      razorpayError: error.error
     });
+    
+    // Check if it's a Razorpay API error
+    if (error.error && error.error.description) {
+      return NextResponse.json(
+        { 
+          error: 'Razorpay API Error',
+          details: error.error.description,
+          code: error.error.code
+        },
+        { status: 400 }
+      );
+    }
     
     return NextResponse.json(
       { 
         error: 'Failed to create order',
-        details: error.message,
+        details: error.message || 'Unknown error',
         code: error.code
       },
       { status: 500 }
