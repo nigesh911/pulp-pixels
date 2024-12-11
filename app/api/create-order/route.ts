@@ -7,6 +7,19 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
+export async function GET() {
+  if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+    return NextResponse.json(
+      { error: 'Payment service not configured' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ 
+    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID 
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { amount, wallpaperId } = await request.json();
@@ -52,7 +65,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       orderId: order.id,
       amount: order.amount,
-      currency: order.currency
+      currency: order.currency,
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
     });
   } catch (error: any) {
     // Log the complete error

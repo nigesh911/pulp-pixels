@@ -62,7 +62,7 @@ export default function WallpaperClient({ wallpaper }: WallpaperClientProps) {
         }
 
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          key: data.key,
           amount: data.amount,
           currency: data.currency,
           name: 'Pulp Pixels',
@@ -117,7 +117,6 @@ export default function WallpaperClient({ wallpaper }: WallpaperClientProps) {
         };
 
         try {
-          console.log('Initializing Razorpay with key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
           const rzp = new window.Razorpay(options);
           
           rzp.on('payment.failed', function(response: any) {
